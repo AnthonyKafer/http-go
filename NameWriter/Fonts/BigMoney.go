@@ -1,4 +1,4 @@
-package nameWriter
+package Fonts
 
 var BigMoney = map[string][]string{
 	"A": {

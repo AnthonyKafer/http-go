@@ -1,4 +1,4 @@
-package nameWriter
+package Fonts
 
 var Big = map[string][]string{
 	"A": {
