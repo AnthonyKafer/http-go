@@ -1,34 +1,45 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	nameWriter "go-server/NameWriter"
 	"net/http"
+
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 )
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "hey bitch - route: ")
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/write-my-name/", func(w http.ResponseWriter, r *http.Request) {
+		name := r.URL.Path[len("/write-my-name/"):]
+
+		res := nameWriter.WriteName(
+			name,
+			r.URL.Query().Get("style"),
+			r.URL.Query().Get("color"),
+		)
+
+		fmt.Fprint(w, res)
 	})
 
-	http.HandleFunc("/art/{name}", func(w http.ResponseWriter, r *http.Request) {
-		art_name := r.PathValue("name")
-		http.ServeFile(w, r, "assets/"+art_name+".txt")
+	mux.HandleFunc("/get-fonts", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, nameWriter.GetFonts())
 	})
 
-	http.HandleFunc("/write-my-name/{name}", func(w http.ResponseWriter, r *http.Request) {
-		art_name := r.PathValue("name")
-		style := r.URL.Query().Get("style")
-		color := r.URL.Query().Get("color")
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("METHOD:", r.Method)
+		fmt.Println("PATH:", r.URL.Path)
 
-		res := nameWriter.WriteName(art_name, style, color)
-		fmt.Println(res)
-		fmt.Fprintf(w, res)
+		http.Error(w, "not found: "+r.URL.Path, http.StatusNotFound)
 	})
 
-	http.HandleFunc("/get-fonts", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, nameWriter.GetFonts())
-	})
+	adapter := httpadapter.NewV2(mux)
 
-	http.ListenAndServe(":8000", nil)
+	lambda.Start(func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+		return adapter.ProxyWithContext(ctx, req)
+	})
 }
