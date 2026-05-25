@@ -26,6 +26,12 @@ func main() {
 		fmt.Fprint(w, res)
 	})
 
+	mux.HandleFunc("/art/", func(w http.ResponseWriter, r *http.Request) {
+		name := r.URL.Path[len("/art/"):]
+
+		http.ServeFile(w, r, "assets/"+name+".txt")
+	})
+
 	mux.HandleFunc("/get-fonts", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, nameWriter.GetFonts())
 	})
